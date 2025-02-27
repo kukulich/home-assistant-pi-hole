@@ -1,0 +1,371 @@
+"""The above class represents Pi-Hole API Client with methods for authentication, retrieving summary data, managing blocking status, and logging requests."""
+
+import asyncio
+import copy
+import hashlib
+import logging
+from socket import gaierror as GaiError
+from typing import Any
+
+from aiohttp import ClientError, ContentTypeError
+import requests
+
+from .exceptions import (
+    ClientConnectorException,
+    ContentTypeException,
+    UnauthorizedException,
+    handle_status,
+)
+
+
+class API:
+    """Pi-Hole API Client."""
+
+    _logger: logging.Logger | None
+    _password: Any = ""
+    _session: Any = None
+    _sid: str | None = None
+
+    cache_blocking: dict[str, Any] = {}
+    cache_padd: dict[str, Any] = {}
+    cache_summary: dict[str, Any] = {}
+
+    url: str = ""
+
+    def __init__(  # noqa: D417
+        self,
+        session,
+        url: str = "http://pi.hole",
+        password: str = "",
+        logger: logging.Logger | None = None,
+    ) -> None:
+        """Initialize Pi-Hole API Client object with an API URL and an optional logger.
+
+        Args:
+          url (str): Represents the URL of API endpoint. Defaults to "http://pi.hole".
+          logger (Logger | None): Expects an object of type `Logger` or `None` which will be used to display debug message.
+
+        """
+
+        self.url = url
+        self._logger = logger
+        self._password = password
+        self._session = session
+
+    def _get_logger(self) -> logging.Logger:
+        """Return a logger if it exists, otherwise it creates a new logger.
+
+        Returns:
+          result (Logger): The logger provided during object initialization, otherwise a new logger is created.
+
+        """
+
+        if self._logger is None:
+            return logging.getLogger()
+
+        return self._logger
+
+    async def _call(
+        self,
+        route: str,
+        method: str,
+        action: str | None = None,
+        data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Send HTTP requests with specified method, route, and data.
+
+        Args:
+            route (str): Represents the specific endpoint that you want to call.
+            method (str): Represents the HTTP method to be used. It can be one of the following: "post", "delete", or "get".
+            action (str): Represents the action name requested.
+            data (dict[str, Any] | None): Used to pass a dictionary containing data to be sent in the request when making a POST request.
+
+        Returns:
+          result (dict[str, Any]): A dictionary is being returned with keys "code", "reason", and "data".
+
+        """
+
+        await self._check_authentification(action)
+        await self._request_login(action)
+
+        self._get_logger().debug("Session ID Hash: %s", self._get_sid_hash(self._sid))
+
+        url: str = f"{self.url}{route}"
+
+        headers: dict[str, str] = {
+            "accept": "application/json",
+            "content-type": "application/json",
+        }
+
+        if self._sid is not None:
+            headers = headers | {"sid": self._sid}
+
+        self._get_logger().debug("Request: %s %s", method.upper(), url)
+
+        request: requests.Response
+
+        try:
+            async with asyncio.timeout(600):
+                if method.lower() == "post":
+                    request = await self._session.post(url, json=data, headers=headers)
+                elif method.lower() == "delete":
+                    request = await self._session.delete(url, headers=headers)
+                elif method.lower() == "get":
+                    request = await self._session.get(url, headers=headers)
+                else:
+                    raise RuntimeError("Method is not supported/implemented.")
+
+        except (TimeoutError, ClientError, GaiError) as err:
+            raise ClientConnectorException from err
+
+        result_data: dict[str, Any] = {}
+
+        self._get_logger().debug("Status Code: %d", request.status)
+        handle_status(request.status)
+
+        if request.status < 400 and request.text != "":
+            try:
+                result_data = await request.json()
+                result_data_debug: dict[str, Any] = copy.deepcopy(result_data)
+
+                if action == "login":
+                    result_data_debug["session"]["sid"] = "[redacted]"
+
+                # self._get_logger().debug("Data: %s", result_data_debug)
+
+            except ContentTypeError as err:
+                raise ContentTypeException from err
+
+        return {
+            "code": request.status,
+            "reason": request.reason,
+            "data": result_data,
+        }
+
+    async def _check_authentification(self, action: str) -> None:
+        """..."""
+
+        try:
+            if (
+                action not in ("login", "authentification_status")
+                and self._sid is not None
+            ):
+                response: dict[str, Any] = await self.call_authentification_status()
+
+                if (
+                    response["code"] != 200
+                    or response["data"]["session"]["valid"] is False
+                ):
+                    self._sid = None
+
+        except UnauthorizedException:
+            self._sid = None
+
+    async def _request_login(self, action: str) -> None:
+        """..."""
+
+        if action != "login" and self._sid is None:
+            await self.call_login()
+
+    def _get_sid_hash(self, sid: str) -> str | None:
+        """..."""
+
+        if self._sid is not None:
+            return str(hashlib.sha256(self._sid.encode("utf-8")).hexdigest())
+
+        return None
+
+    async def call_authentification_status(self) -> dict[str, Any]:
+        """..."""
+
+        url: str = "/auth"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="authentification_status",
+            method="GET",
+        )
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_login(self) -> dict[str, Any]:
+        """Authenticate a user with a password.
+
+        Args:
+          password (str): Represents tne password used to authenticate the user during the login process.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/auth"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="login",
+            method="POST",
+            data={"password": self._password},
+        )
+
+        self._sid = result["data"]["session"]["sid"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_logout(self) -> dict[str, Any]:
+        """Drop the current session.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/auth"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="logout",
+            method="DELETE",
+        )
+
+        self._sid = None
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_summary(self) -> dict[str, Any]:
+        """Retrieve an overview of Pi-hole activity.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/stats/summary"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="summary",
+            method="GET",
+        )
+
+        self.cache_summary = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_padd(self, full: bool = True) -> dict[str, Any]:
+        """Retrieve the Pi-hole API Dashboard information.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = f"/padd?full={str(full).lower()}"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="padd",
+            method="GET",
+        )
+
+        self.cache_padd = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_blocking_status(self) -> dict[str, Any]:
+        """Retrieve current blocking status.
+
+        Returns:
+          result (dict[str, Any]): A Dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/dns/blocking"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="blocking_status",
+            method="GET",
+        )
+
+        self.cache_blocking = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_blocking_enabled(self) -> dict[str, Any]:
+        """Enable blocking for DNS requests.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/dns/blocking"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="blocking_enabled",
+            method="POST",
+            data={"blocking": True, "timer": None},
+        )
+        self.cache_blocking = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_blocking_disabled(
+        self, duration: int | None = 120
+    ) -> dict[str, Any]:
+        """Disable blocking for DNS requests.
+
+        Args:
+          duration (int | None): Represents the time duration in seconds for which the blocking feature will be disabled. Defaults to 120
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/dns/blocking"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="blocking_disabled",
+            method="POST",
+            data={"blocking": False, "timer": duration},
+        )
+
+        self.cache_blocking = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
