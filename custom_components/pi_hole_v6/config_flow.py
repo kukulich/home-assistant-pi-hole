@@ -91,7 +91,7 @@ class PiHoleV6dFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         try:
-            await api_client.isAuthenticated()
+            await api_client.call_authentification_status()
         except ClientConnectorException as err:
             _LOGGER.debug("Connection failed: %s", err)
             return {CONF_URL: "cannot_connect"}
