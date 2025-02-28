@@ -31,6 +31,12 @@ The "Pi-Hole V6 Integration" adds compatibility with the new API in Home Assista
 - Retrieve filtering statistics.
 - Compatibility with the Pi-Hole V6 API.
 
+The following sensors are currently implemented :
+
+<p align="center" width="100%">
+    <img src="img/entitites.jpg" width="300">
+</p>
+
 ## Installation
 
 ### Installation via HACS
