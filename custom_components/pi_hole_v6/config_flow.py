@@ -105,7 +105,7 @@ class PiHoleV6dFlowHandler(ConfigFlow, domain=DOMAIN):
         if not isinstance(await api_client.call_summary(), dict):
             return {"base": "coco"}
 
-        if not isinstance(await api_client.blocking_status(), dict):
+        if not isinstance(await api_client.call_blocking_status(), dict):
             return {"base": "coco"}
 
         return {}
