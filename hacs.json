@@ -1,7 +1,7 @@
 {
     "name": "Pi-hole V6 Integration",
     "hacs": "2.0.0",
-    "homeassistant": "2025.2.0",
+    "homeassistant": "2025.3.0",
     "country": "FR",
     "render_readme": true
   }
