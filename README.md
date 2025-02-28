@@ -8,6 +8,9 @@
 [![HACS validation](https://github.com/bastgau/ha-pi-hole-v6/actions/workflows/validate-for-hacs.yml/badge.svg)](https://github.com/bastgau/ha-custom-universal-media-player/actions/workflows/validate-for-hacs.yml)
 [![HASSFEST validation](https://github.com/bastgau/ha-pi-hole-v6/actions/workflows/validate-with-hassfest.yml/badge.svg)](https://github.com/bastgau/ha-custom-universal-media-player/actions/workflows/validate-with-hassfest.yml)
 
+<p align="center" width="100%">
+    <img src="https://brands.home-assistant.io/_/pi_hole_v6/logo.png">
+</p>
 
 Original component : [Pi-hole](https://www.home-assistant.io/integrations/pi_hole/)
 
