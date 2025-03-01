@@ -1,5 +1,4 @@
-# Custom universal media player for Home Assistant
-
+# Pi-Hole V6 Integration for Home Assistant
 
 [![Maintenair : bastgau](https://img.shields.io/badge/maintener-bastgau-orange?logo=github&logoColor=%23959da5&labelColor=%232d333a)](https://github.com/bastgau)
 [![Made with Python](https://img.shields.io/badge/Made_with-Python-blue?style=flat&logo=python&logoColor=%23959da5&labelColor=%232d333a)](https://www.python.org/)
@@ -15,8 +14,6 @@
 Original component : [Pi-hole](https://www.home-assistant.io/integrations/pi_hole/)
 
 > The Pi-hole integration allows you to retrieve statistics and interact with a Pi-hole system.
-
-# Pi-Hole V6 Integration for Home Assistant
 
 ## Description
 
