@@ -67,7 +67,12 @@
                 "unit_of_measurement": "domains"
             }
         },
-        "update": {
+       "switch": {
+            "group": {
+                "name": "Group {groupName}"
+            }
+       },
+       "update": {
             "core_update_available": {
                 "name": "Core update available"
             },
