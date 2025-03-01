@@ -29,6 +29,7 @@ class API:
     cache_blocking: dict[str, Any] = {}
     cache_padd: dict[str, Any] = {}
     cache_summary: dict[str, Any] = {}
+    cache_groups: dict[str, dict[str, Any]] = {}
 
     url: str = ""
 
@@ -108,6 +109,8 @@ class API:
             async with asyncio.timeout(600):
                 if method.lower() == "post":
                     request = await self._session.post(url, json=data, headers=headers)
+                elif method.lower() == "put":
+                    request = await self._session.put(url, json=data, headers=headers)
                 elif method.lower() == "delete":
                     request = await self._session.delete(url, headers=headers)
                 elif method.lower() == "get":
@@ -363,6 +366,89 @@ class API:
         )
 
         self.cache_blocking = result["data"]
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_get_groups(self) -> dict[str, Any]:
+        """Retrieve the list of Pi-hole groups.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = "/groups"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="groups",
+            method="GET",
+        )
+
+        for group in result["data"]["groups"]:
+            self.cache_groups[group["name"]] = {
+                "name": group["name"],
+                "comment": group["comment"],
+                "enabled": group["enabled"],
+            }
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_group_disable(self, group: str) -> dict[str, Any]:
+        """Disable Pi-hole group.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = f"/groups/{group}"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="group-disable",
+            method="PUT",
+            data={
+                "name": group,
+                "comment": self.cache_groups[group]["comment"],
+                "enabled": False,
+            },
+        )
+
+        return {
+            "code": result["code"],
+            "reason": result["reason"],
+            "data": result["data"],
+        }
+
+    async def call_group_enable(self, group: str) -> dict[str, Any]:
+        """Enable Pi-hole group.
+
+        Returns:
+          result (dict[str, Any]): A dictionary with the keys "code", "reason", and "data".
+
+        """
+
+        url: str = f"/groups/{group}"
+
+        result: dict[str, Any] = await self._call(
+            url,
+            action="group-disable",
+            method="PUT",
+            data={
+                "name": group,
+                "comment": self.cache_groups[group]["comment"],
+                "enabled": True,
+            },
+        )
 
         return {
             "code": result["code"],
