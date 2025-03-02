@@ -71,12 +71,12 @@
                 "unit_of_measurement": "seconds"
             }
         },
-       "switch": {
+        "switch": {
             "group": {
                 "name": "Group {groupName}"
             }
-       },
-       "update": {
+        },
+        "update": {
             "core_update_available": {
                 "name": "Core update available"
             },

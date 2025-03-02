@@ -6,11 +6,11 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -35,9 +35,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        entry: PiHoleV6ConfigEntry,
-        async_add_entities: AddConfigEntryEntitiesCallback,
+    hass: HomeAssistant,
+    entry: PiHoleV6ConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Pi-hole V6 switch."""
     name = entry.data[CONF_NAME]
@@ -123,16 +123,16 @@ class PiHoleV6Switch(PiHoleV6Entity, SwitchEntity):
             self.schedule_update_ha_state(force_refresh=True)
 
         except (
-                BadRequestException,
-                UnauthorizedException,
-                RequestFailedException,
-                ForbiddenException,
-                NotFoundException,
-                TooManyRequestsException,
-                ServerErrorException,
-                BadGatewayException,
-                ServiceUnavailableException,
-                GatewayTimeoutException,
+            BadRequestException,
+            UnauthorizedException,
+            RequestFailedException,
+            ForbiddenException,
+            NotFoundException,
+            TooManyRequestsException,
+            ServerErrorException,
+            BadGatewayException,
+            ServiceUnavailableException,
+            GatewayTimeoutException,
         ) as err:
             _LOGGER.error("Unable to %s Pi-hole V6: %s", action, err)
 
@@ -221,4 +221,6 @@ class PiHoleV6Group(PiHoleV6Entity, SwitchEntity):
             ServiceUnavailableException,
             GatewayTimeoutException,
         ) as err:
-            _LOGGER.error("Unable to %s Pi-hole V6 group %s: %s", action, self._group, err)
+            _LOGGER.error(
+                "Unable to %s Pi-hole V6 group %s: %s", action, self._group, err
+            )
