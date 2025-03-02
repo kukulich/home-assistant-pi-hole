@@ -18,7 +18,7 @@
                 "data_description": {
                     "password": "Password to be used for login",
                     "url": "URL or address of your Pi-hole (ie: https://pi.hole:443/api)"
-                  },
+                },
                 "description": "This integration allows you to retrieve statistics and interact with a Pi-hole V6 system.",
                 "title": "Pi-hole V6 Integration"
             }
@@ -65,6 +65,10 @@
             "unique_domains": {
                 "name": "DNS unique domains",
                 "unit_of_measurement": "domains"
+            },
+            "timer": {
+                "name": "Remaining until blocking mode",
+                "unit_of_measurement": "seconds"
             }
         },
         "update": {

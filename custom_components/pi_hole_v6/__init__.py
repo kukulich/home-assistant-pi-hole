@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_URL, Platform
@@ -23,7 +23,7 @@ PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.SWITCH,
-    # Platform.UPDATE,
+    Platform.UPDATE,
 ]
 
 type PiHoleV6ConfigEntry = ConfigEntry[PiHoleV6Data]
@@ -59,6 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleV6ConfigEntry) -> 
         "DNS Queries Forwarded": "queries_forwarded",
         "DNS Unique Clients": "unique_clients",
         "DNS Unique Domains": "unique_domains",
+        "Remaining until blocking mode": "timer",
     }
 
     @callback
@@ -95,6 +96,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleV6ConfigEntry) -> 
             raise ConfigEntryAuthFailed
 
         if not isinstance(await api_client.call_padd(), dict):
+            raise ConfigEntryAuthFailed
+
+        if not isinstance(await api_client.call_get_groups(), dict):
             raise ConfigEntryAuthFailed
 
     coordinator = DataUpdateCoordinator(
