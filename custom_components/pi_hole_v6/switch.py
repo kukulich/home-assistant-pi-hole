@@ -56,6 +56,7 @@ async def async_setup_entry(
             PiHoleV6Group(
                 hole_data.api,
                 hole_data.coordinator,
+                name,
                 entry.entry_id,
                 group,
             )
@@ -160,23 +161,23 @@ class PiHoleV6Group(PiHoleV6Entity, SwitchEntity):
     """Representation of a Pi-hole V6 group."""
 
     _attr_icon = "mdi:account-multiple"
-    _attr_has_entity_name = True
-    _attr_translation_key = "group"
 
     def __init__(
         self,
         api: PiholeAPI,
         coordinator: DataUpdateCoordinator,
+        name: str,
         server_unique_id: str,
         group: str,
     ) -> None:
-        super().__init__(api, coordinator, f"Group {group}", server_unique_id)
+        super().__init__(api, coordinator, f"{name} Group {group}", server_unique_id)
 
         self._group = group
 
-        self._attr_translation_placeholders = {
-            "groupName": group,
-        }
+    @property
+    def name(self) -> str:
+        """Return the name of the switch."""
+        return self._name
 
     @property
     def unique_id(self) -> str:
