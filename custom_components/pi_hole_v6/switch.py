@@ -86,6 +86,7 @@ class PiHoleV6Switch(PiHoleV6Entity, SwitchEntity):
     """Representation of a Pi-hole V6 switch."""
 
     _attr_icon = "mdi:pi-hole"
+    _attr_has_entity_name = False
 
     @property
     def name(self) -> str:
@@ -161,6 +162,7 @@ class PiHoleV6Group(PiHoleV6Entity, SwitchEntity):
     """Representation of a Pi-hole V6 group."""
 
     _attr_icon = "mdi:account-multiple"
+    _attr_translation_key = "group"
 
     def __init__(
         self,
@@ -170,14 +172,13 @@ class PiHoleV6Group(PiHoleV6Entity, SwitchEntity):
         server_unique_id: str,
         group: str,
     ) -> None:
-        super().__init__(api, coordinator, f"{name} Group {group}", server_unique_id)
+        super().__init__(api, coordinator, name, server_unique_id)
 
         self._group = group
 
-    @property
-    def name(self) -> str:
-        """Return the name of the switch."""
-        return self._name
+        self._attr_translation_placeholders = {
+            "groupName": group,
+        }
 
     @property
     def unique_id(self) -> str:
