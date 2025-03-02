@@ -51,6 +51,10 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
         key="unique_domains",
         translation_key="unique_domains",
     ),
+    SensorEntityDescription(
+        key="timer",
+        translation_key="timer",
+    ),
 )
 
 
@@ -118,5 +122,8 @@ class PiHoleV6Sensor(PiHoleV6Entity, SensorEntity):
                 return self.api.cache_summary["clients"]["active"]
             case "unique_domains":
                 return self.api.cache_summary["queries"]["unique_domains"]
+            case "timer":
+                value: int | None = self.api.cache_blocking["timer"]
+                return value if value is not None else 0
 
         return ""

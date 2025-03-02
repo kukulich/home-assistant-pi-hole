@@ -7,8 +7,8 @@ import logging
 from socket import gaierror as GaiError
 from typing import Any
 
-from aiohttp import ClientError, ContentTypeError
 import requests
+from aiohttp import ClientError, ContentTypeError
 
 from .exceptions import (
     ClientConnectorException,
@@ -105,7 +105,7 @@ class API:
         request: requests.Response
 
         try:
-            async with asyncio.timeout(600):
+            async with asyncio.timeout(60):
                 if method.lower() == "post":
                     request = await self._session.post(url, json=data, headers=headers)
                 elif method.lower() == "delete":
