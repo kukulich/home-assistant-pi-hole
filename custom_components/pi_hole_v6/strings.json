@@ -71,6 +71,11 @@
         "unit_of_measurement": "[%key:component::pi_hole_v6::entity::sensor::domains_being_blocked::unit_of_measurement%]"
       }
     },
+    "switch": {
+      "group": {
+        "name": "Group {groupName}"
+      }
+    },
     "update": {
       "core_update_available": {
         "name": "Core update available"
