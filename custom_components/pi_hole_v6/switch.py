@@ -12,8 +12,10 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import PiHoleV6ConfigEntry
+from .api import API as PiholeAPI
 from .const import SERVICE_DISABLE, SERVICE_DISABLE_ATTR_DURATION, SERVICE_ENABLE
 from .entity import PiHoleV6Entity
 from .exceptions import (
@@ -33,9 +35,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: PiHoleV6ConfigEntry,
-    async_add_entities: AddConfigEntryEntitiesCallback,
+        hass: HomeAssistant,
+        entry: PiHoleV6ConfigEntry,
+        async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Pi-hole V6 switch."""
     name = entry.data[CONF_NAME]
@@ -48,6 +50,17 @@ async def async_setup_entry(
             entry.entry_id,
         )
     ]
+
+    for group in hole_data.api.cache_groups:
+        switches.append(
+            PiHoleV6Group(
+                hole_data.api,
+                hole_data.coordinator,
+                entry.entry_id,
+                group,
+            )
+        )
+
     async_add_entities(switches, True)
 
     # register service
@@ -110,16 +123,16 @@ class PiHoleV6Switch(PiHoleV6Entity, SwitchEntity):
             self.schedule_update_ha_state(force_refresh=True)
 
         except (
-            BadRequestException,
-            UnauthorizedException,
-            RequestFailedException,
-            ForbiddenException,
-            NotFoundException,
-            TooManyRequestsException,
-            ServerErrorException,
-            BadGatewayException,
-            ServiceUnavailableException,
-            GatewayTimeoutException,
+                BadRequestException,
+                UnauthorizedException,
+                RequestFailedException,
+                ForbiddenException,
+                NotFoundException,
+                TooManyRequestsException,
+                ServerErrorException,
+                BadGatewayException,
+                ServiceUnavailableException,
+                GatewayTimeoutException,
         ) as err:
             _LOGGER.error("Unable to %s Pi-hole V6: %s", action, err)
 
@@ -141,3 +154,71 @@ class PiHoleV6Switch(PiHoleV6Entity, SwitchEntity):
 
         _LOGGER.debug("Enabling Pi-hole '%s'", self.name)
         await self.async_turn(action="enable")
+
+
+class PiHoleV6Group(PiHoleV6Entity, SwitchEntity):
+    """Representation of a Pi-hole V6 group."""
+
+    _attr_icon = "mdi:account-multiple"
+    _attr_has_entity_name = True
+    _attr_translation_key = "group"
+
+    def __init__(
+        self,
+        api: PiholeAPI,
+        coordinator: DataUpdateCoordinator,
+        server_unique_id: str,
+        group: str,
+    ) -> None:
+        super().__init__(api, coordinator, f"Group {group}", server_unique_id)
+
+        self._group = group
+
+        self._attr_translation_placeholders = {
+            "groupName": group,
+        }
+
+    @property
+    def unique_id(self) -> str:
+        """Return the unique id of the group."""
+        return f"{self._server_unique_id}/Group/{self._group}"
+
+    @property
+    def is_on(self) -> bool:
+        """Return if the group is on."""
+        return self.api.cache_groups[self._group]["enabled"]
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn on the group."""
+        await self.async_turn(action="enable")
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn off the group."""
+        await self.async_turn(action="disable")
+
+    async def async_turn(self, action: str) -> None:
+        """Turn on/off the group."""
+
+        try:
+            if action == "enable":
+                await self.api.call_group_enable(self._group)
+
+            if action == "disable":
+                await self.api.call_group_disable(self._group)
+
+            await self.async_update()
+            self.schedule_update_ha_state(force_refresh=True)
+
+        except (
+            BadRequestException,
+            UnauthorizedException,
+            RequestFailedException,
+            ForbiddenException,
+            NotFoundException,
+            TooManyRequestsException,
+            ServerErrorException,
+            BadGatewayException,
+            ServiceUnavailableException,
+            GatewayTimeoutException,
+        ) as err:
+            _LOGGER.error("Unable to %s Pi-hole V6 group %s: %s", action, self._group, err)

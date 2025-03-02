@@ -97,6 +97,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleV6ConfigEntry) -> 
         if not isinstance(await api_client.call_padd(), dict):
             raise ConfigEntryAuthFailed
 
+        if not isinstance(await api_client.call_get_groups(), dict):
+            raise ConfigEntryAuthFailed
+
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
